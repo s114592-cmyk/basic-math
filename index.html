@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>數學快問快答</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:"Microsoft JhengHei",sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#4f46e5,#7c3aed);
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+color:white;
+}
+
+.container{
+width:90%;
+max-width:700px;
+background:rgba(255,255,255,0.1);
+backdrop-filter:blur(10px);
+padding:30px;
+border-radius:20px;
+text-align:center;
+}
+
+h1{
+margin-bottom:20px;
+}
+
+input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+margin-bottom:15px;
+font-size:18px;
+}
+
+button{
+padding:12px 24px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-size:18px;
+font-weight:bold;
+transition:.2s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+.start-btn{
+background:#22c55e;
+color:white;
+}
+
+.game-area{
+display:none;
+}
+
+.progress-container{
+width:100%;
+height:20px;
+background:rgba(255,255,255,0.2);
+border-radius:20px;
+overflow:hidden;
+margin-bottom:20px;
+}
+
+.progress-bar{
+height:100%;
+width:100%;
+background:#22c55e;
+transition:width 0.1s linear;
+}
+
+.question{
+font-size:42px;
+margin:30px 0;
+font-weight:bold;
+}
+
+.info{
+display:flex;
+justify-content:space-between;
+margin-bottom:20px;
+font-size:20px;
+}
+
+.answer-buttons{
+display:flex;
+gap:20px;
+justify-content:center;
+}
+
+.correct{
+background:#16a34a;
+color:white;
+}
+
+.wrong{
+background:#dc2626;
+color:white;
+}
+
+.message{
+margin-top:20px;
+height:30px;
+font-size:20px;
+}
+
+.leaderboard{
+margin-top:30px;
+text-align:left;
+}
+
+.leaderboard h2{
+text-align:center;
+margin-bottom:15px;
+}
+
+.leaderboard table{
+width:100%;
+border-collapse:collapse;
+}
+
+.leaderboard th,
+.leaderboard td{
+padding:10px;
+border-bottom:1px solid rgba(255,255,255,.2);
+}
+
+.game-over{
+display:none;
+}
+
+.restart-btn{
+background:#f59e0b;
+color:white;
+margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div id="startScreen">
+<h1>🧮 數學快問快答</h1>
+
+<input id="playerName" placeholder="請輸入玩家名稱">
+
+<button class="start-btn" onclick="startGame()">
+開始遊戲
+</button>
+
+<div class="leaderboard">
+<h2>🏆 排行榜</h2>
+<table>
+<thead>
+<tr>
+<th>排名</th>
+<th>玩家</th>
+<th>分數</th>
+</tr>
+</thead>
+<tbody id="leaderboardBody"></tbody>
+</table>
+</div>
+</div>
+
+<div class="game-area" id="gameArea">
+
+<div class="progress-container">
+<div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div class="info">
+<div>分數：<span id="score">0</span></div>
+<div>題數：<span id="count">0</span></div>
+</div>
+
+<div class="question" id="question">
+1 + 1 = 2
+</div>
+
+<div class="answer-buttons">
+<button class="correct" onclick="answer(true)">
+✔ 正確
+</button>
+
+<button class="wrong" onclick="answer(false)">
+✖ 錯誤
+</button>
+</div>
+
+<div class="message" id="message"></div>
+
+</div>
+
+<div class="game-over" id="gameOver">
+<h1>🎉 遊戲結束</h1>
+
+<h2>總分：<span id="finalScore"></span></h2>
+
+<button class="restart-btn" onclick="location.reload()">
+再玩一次
+</button>
+</div>
+
+</div>
+
+<script>
+
+let playerName="";
+let score=0;
+let count=0;
+
+let currentAnswer=true;
+
+let maxTime=15;
+let timeLeft=15;
+
+let timer;
+let progressTimer;
+
+function startGame(){
+
+playerName=document.getElementById("playerName").value.trim();
+
+if(playerName===""){
+alert("請輸入玩家名稱");
+return;
+}
+
+document.getElementById("startScreen").style.display="none";
+document.getElementById("gameArea").style.display="block";
+
+score=0;
+count=0;
+
+updateInfo();
+generateQuestion();
+}
+
+function generateQuestion(){
+
+clearInterval(timer);
+clearInterval(progressTimer);
+
+timeLeft=maxTime;
+
+let a=Math.floor(Math.random()*20)+1;
+let b=Math.floor(Math.random()*20)+1;
+
+const operators=["+","-","×"];
+
+let op=operators[Math.floor(Math.random()*operators.length)];
+
+let realResult;
+
+switch(op){
+case "+":
+realResult=a+b;
+break;
+case "-":
+realResult=a-b;
+break;
+case "×":
+realResult=a*b;
+break;
+}
+
+currentAnswer=Math.random()>0.5;
+
+let shownResult;
+
+if(currentAnswer){
+shownResult=realResult;
+}else{
+shownResult=realResult+
+(Math.floor(Math.random()*7)+1)*
+(Math.random()>0.5?1:-1);
+}
+
+document.getElementById("question").innerText=
+`${a} ${op} ${b} = ${shownResult}`;
+
+startTimer();
+}
+
+function startTimer(){
+
+const bar=document.getElementById("progressBar");
+
+timer=setInterval(()=>{
+
+timeLeft--;
+
+if(timeLeft<=0){
+endGame();
+}
+
+},1000);
+
+progressTimer=setInterval(()=>{
+
+let percent=(timeLeft/maxTime)*100;
+bar.style.width=percent+"%";
+
+},100);
+
+}
+
+function answer(choice){
+
+if(choice===currentAnswer){
+
+let ratio=timeLeft/maxTime;
+
+let gained;
+
+if(ratio>0.66){
+gained=3;
+}else if(ratio>0.33){
+gained=2;
+}else{
+gained=1;
+}
+
+score+=gained;
+count++;
+
+document.getElementById("message").innerText=
+`答對！ +${gained}分`;
+
+if(count%5===0 && maxTime>3){
+maxTime--;
+}
+
+updateInfo();
+
+setTimeout(()=>{
+document.getElementById("message").innerText="";
+generateQuestion();
+},500);
+
+}else{
+endGame();
+}
+
+}
+
+function updateInfo(){
+
+document.getElementById("score").innerText=score;
+document.getElementById("count").innerText=count;
+}
+
+function endGame(){
+
+clearInterval(timer);
+clearInterval(progressTimer);
+
+saveScore();
+
+document.getElementById("gameArea").style.display="none";
+document.getElementById("gameOver").style.display="block";
+
+document.getElementById("finalScore").innerText=score;
+}
+
+function saveScore(){
+
+let data=
+JSON.parse(localStorage.getItem("mathLeaderboard")) || [];
+
+data.push({
+name:playerName,
+score:score
+});
+
+data.sort((a,b)=>b.score-a.score);
+
+data=data.slice(0,10);
+
+localStorage.setItem(
+"mathLeaderboard",
+JSON.stringify(data)
+);
+}
+
+function loadLeaderboard(){
+
+let data=
+JSON.parse(localStorage.getItem("mathLeaderboard")) || [];
+
+let html="";
+
+data.forEach((player,index)=>{
+
+html+=`
+<tr>
+<td>${index+1}</td>
+<td>${player.name}</td>
+<td>${player.score}</td>
+</tr>
+`;
+});
+
+document.getElementById("leaderboardBody").innerHTML=html;
+}
+
+loadLeaderboard();
+
+</script>
+
+</body>
+</html>

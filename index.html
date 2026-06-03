@@ -43,6 +43,7 @@ border:none;
 border-radius:10px;
 margin-bottom:15px;
 font-size:18px;
+color: #000;
 }
 
 button{
@@ -138,6 +139,7 @@ border-collapse:collapse;
 .leaderboard td{
 padding:10px;
 border-bottom:1px solid rgba(255,255,255,.2);
+text-align: center;
 }
 
 .game-over{
@@ -165,7 +167,7 @@ margin-top:20px;
 </button>
 
 <div class="leaderboard">
-<h2>🏆 排行榜</h2>
+<h2>🏆 全球排行榜</h2>
 <table>
 <thead>
 <tr>
@@ -220,209 +222,200 @@ margin-top:20px;
 
 </div>
 
-<script>
+<script type="module">
+// 引入 Firebase 必要的 SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// 你的 Firebase 設定資料
+const firebaseConfig = {
+  apiKey: "AIzaSyBJidOl11HC1YgtI_79jHGde76Z4nsNkQM",
+  authDomain: "basic-math-762ce.firebaseapp.com",
+  databaseURL: "https://basic-math-762ce-default-rtdb.firebaseio.com",
+  projectId: "basic-math-762ce",
+  storageBucket: "basic-math-762ce.firebasestorage.app",
+  messagingSenderId: "592628122502",
+  appId: "1:592628122502:web:9d69cc33f30ee88616a207",
+  measurementId: "G-BGR8BEKFK9"
+};
+
+// 初始化 Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 let playerName="";
 let score=0;
 let count=0;
-
 let currentAnswer=true;
-
 let maxTime=15;
 let timeLeft=15;
-
 let timer;
 let progressTimer;
 
-function startGame(){
+// 將遊戲控制函式掛載至 window 物件，確保 HTML 中的 onclick 屬性可以順利觸發
+window.startGame = function() {
+    playerName=document.getElementById("playerName").value.trim();
 
-playerName=document.getElementById("playerName").value.trim();
+    if(playerName===""){
+        alert("請輸入玩家名稱");
+        return;
+    }
 
-if(playerName===""){
-alert("請輸入玩家名稱");
-return;
-}
+    document.getElementById("startScreen").style.display="none";
+    document.getElementById("gameArea").style.display="block";
 
-document.getElementById("startScreen").style.display="none";
-document.getElementById("gameArea").style.display="block";
+    score=0;
+    count=0;
 
-score=0;
-count=0;
-
-updateInfo();
-generateQuestion();
+    updateInfo();
+    generateQuestion();
 }
 
 function generateQuestion(){
+    clearInterval(timer);
+    clearInterval(progressTimer);
 
-clearInterval(timer);
-clearInterval(progressTimer);
+    timeLeft=maxTime;
 
-timeLeft=maxTime;
+    let a=Math.floor(Math.random()*20)+1;
+    let b=Math.floor(Math.random()*20)+1;
 
-let a=Math.floor(Math.random()*20)+1;
-let b=Math.floor(Math.random()*20)+1;
+    const operators=["+","-","×"];
+    let op=operators[Math.floor(Math.random()*operators.length)];
 
-const operators=["+","-","×"];
+    let realResult;
 
-let op=operators[Math.floor(Math.random()*operators.length)];
+    switch(op){
+        case "+": realResult=a+b; break;
+        case "-": realResult=a-b; break;
+        case "×": realResult=a*b; break;
+    }
 
-let realResult;
+    currentAnswer=Math.random()>0.5;
 
-switch(op){
-case "+":
-realResult=a+b;
-break;
-case "-":
-realResult=a-b;
-break;
-case "×":
-realResult=a*b;
-break;
-}
+    let shownResult;
 
-currentAnswer=Math.random()>0.5;
+    if(currentAnswer){
+        shownResult=realResult;
+    }else{
+        shownResult=realResult+(Math.floor(Math.random()*7)+1)*(Math.random()>0.5?1:-1);
+    }
 
-let shownResult;
+    document.getElementById("question").innerText=`${a} ${op} ${b} = ${shownResult}`;
 
-if(currentAnswer){
-shownResult=realResult;
-}else{
-shownResult=realResult+
-(Math.floor(Math.random()*7)+1)*
-(Math.random()>0.5?1:-1);
-}
-
-document.getElementById("question").innerText=
-`${a} ${op} ${b} = ${shownResult}`;
-
-startTimer();
+    startTimer();
 }
 
 function startTimer(){
+    const bar=document.getElementById("progressBar");
 
-const bar=document.getElementById("progressBar");
+    timer=setInterval(()=>{
+        timeLeft--;
+        if(timeLeft<=0){
+            endGame();
+        }
+    },1000);
 
-timer=setInterval(()=>{
-
-timeLeft--;
-
-if(timeLeft<=0){
-endGame();
+    progressTimer=setInterval(()=>{
+        let percent=(timeLeft/maxTime)*100;
+        bar.style.width=percent+"%";
+    },100);
 }
 
-},1000);
+window.answer = function(choice){
+    if(choice===currentAnswer){
+        let ratio=timeLeft/maxTime;
+        let gained;
 
-progressTimer=setInterval(()=>{
+        if(ratio>0.66){
+            gained=3;
+        }else if(ratio>0.33){
+            gained=2;
+        }else{
+            gained=1;
+        }
 
-let percent=(timeLeft/maxTime)*100;
-bar.style.width=percent+"%";
+        score+=gained;
+        count++;
 
-},100);
+        document.getElementById("message").innerText=`答對！ +${gained}分`;
 
-}
+        if(count%5===0 && maxTime>3){
+            maxTime--;
+        }
 
-function answer(choice){
+        updateInfo();
 
-if(choice===currentAnswer){
+        setTimeout(()=>{
+            document.getElementById("message").innerText="";
+            generateQuestion();
+        },500);
 
-let ratio=timeLeft/maxTime;
-
-let gained;
-
-if(ratio>0.66){
-gained=3;
-}else if(ratio>0.33){
-gained=2;
-}else{
-gained=1;
-}
-
-score+=gained;
-count++;
-
-document.getElementById("message").innerText=
-`答對！ +${gained}分`;
-
-if(count%5===0 && maxTime>3){
-maxTime--;
-}
-
-updateInfo();
-
-setTimeout(()=>{
-document.getElementById("message").innerText="";
-generateQuestion();
-},500);
-
-}else{
-endGame();
-}
-
+    }else{
+        endGame();
+    }
 }
 
 function updateInfo(){
-
-document.getElementById("score").innerText=score;
-document.getElementById("count").innerText=count;
+    document.getElementById("score").innerText=score;
+    document.getElementById("count").innerText=count;
 }
 
 function endGame(){
+    clearInterval(timer);
+    clearInterval(progressTimer);
 
-clearInterval(timer);
-clearInterval(progressTimer);
+    saveScore(); // 儲存至 Firebase 雲端
 
-saveScore();
+    document.getElementById("gameArea").style.display="none";
+    document.getElementById("gameOver").style.display="block";
 
-document.getElementById("gameArea").style.display="none";
-document.getElementById("gameOver").style.display="block";
-
-document.getElementById("finalScore").innerText=score;
+    document.getElementById("finalScore").innerText=score;
 }
 
+// ☁️ 儲存資料到 Firebase 雲端資料庫
 function saveScore(){
-
-let data=
-JSON.parse(localStorage.getItem("mathLeaderboard")) || [];
-
-data.push({
-name:playerName,
-score:score
-});
-
-data.sort((a,b)=>b.score-a.score);
-
-data=data.slice(0,10);
-
-localStorage.setItem(
-"mathLeaderboard",
-JSON.stringify(data)
-);
+    const scoresRef = ref(db, 'scores');
+    const newScoreRef = push(scoresRef);
+    set(newScoreRef, {
+        name: playerName,
+        score: score,
+        timestamp: Date.now()
+    });
 }
 
+// ☁️ 即時監聽雲端資料庫，自動依分數高低渲染至全球排行榜上
 function loadLeaderboard(){
-
-let data=
-JSON.parse(localStorage.getItem("mathLeaderboard")) || [];
-
-let html="";
-
-data.forEach((player,index)=>{
-
-html+=`
-<tr>
-<td>${index+1}</td>
-<td>${player.name}</td>
-<td>${player.score}</td>
-</tr>
-`;
-});
-
-document.getElementById("leaderboardBody").innerHTML=html;
+    const scoresRef = ref(db, 'scores');
+    
+    onValue(scoresRef, (snapshot) => {
+        let data = [];
+        snapshot.forEach((childSnapshot) => {
+            data.push(childSnapshot.val());
+        });
+        
+        // ✨ 在前端將全體玩家數據依分數從「高到低」進行精準排序
+        data.sort((a, b) => b.score - a.score);
+        
+        // ✨ 精確篩選出最高分的前 10 名
+        let top10 = data.slice(0, 10);
+        
+        let html="";
+        top10.forEach((player, index)=>{
+            html+=`
+            <tr>
+                <td>${index+1}</td>
+                <td>${player.name}</td>
+                <td>${player.score}</td>
+            </tr>
+            `;
+        });
+        document.getElementById("leaderboardBody").innerHTML=html;
+    });
 }
 
+// 啟動監聽全球排行榜
 loadLeaderboard();
-
 </script>
 
 </body>
